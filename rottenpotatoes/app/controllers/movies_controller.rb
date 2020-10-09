@@ -1,7 +1,7 @@
 class MoviesController < ApplicationController
-
+  
   def movie_params
-    params.require(:movie).permit(:title, :rating, :description, :release_date)
+    params.require(:movie).permit(:title, :rating, :description, :release_date, :director)
   end
 
   def show
@@ -14,17 +14,17 @@ class MoviesController < ApplicationController
     sort = params[:sort] || session[:sort]
     case sort
     when 'title'
-      ordering,@title_header = {:title => :asc}, 'bg-warning hilite'
+      ordering,@title_header = {:title => :asc}, 'hilite'
     when 'release_date'
-      ordering,@date_header = {:release_date => :asc}, 'bg-warning hilite'
+      ordering,@date_header = {:release_date => :asc}, 'hilite'
     end
     @all_ratings = Movie.all_ratings
     @selected_ratings = params[:ratings] || session[:ratings] || {}
-
+    
     if @selected_ratings == {}
       @selected_ratings = Hash[@all_ratings.map {|rating| [rating, rating]}]
     end
-
+    
     if params[:sort] != session[:sort] or params[:ratings] != session[:ratings]
       session[:sort] = sort
       session[:ratings] = @selected_ratings
@@ -52,6 +52,27 @@ class MoviesController < ApplicationController
     @movie.update_attributes!(movie_params)
     flash[:notice] = "#{@movie.title} was successfully updated."
     redirect_to movie_path(@movie)
+  end
+  
+  def same_director 
+    @movie = Movie.find(params[:id])
+    director = @movie.director
+    if director.empty? then
+      flash[:notice] = "'#{@movie.title}' has no director info"
+      redirect_to movies_path
+    else
+      @movies = Movie.where(Director: director)
+    end
+  end
+  
+  def search
+    @similar_movies = Movie.similar_movies(params[:title])
+    if @similar_movies.nil? then
+      flash[:notice] = "'#{@movie.title}' has no director info"
+      redirect_to movies_path
+    else
+       @movies = Movie.find_by(title: params[:title])
+    end
   end
 
   def destroy
